@@ -1,0 +1,111 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// run `npx prisma format` to automatically fix errors and format this file
+// run `npx prisma migrate dev --name [name of migration]` to apply this schema to the database
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // provider = "sqlite"
+  provider = "postgresql"
+  // NOTE: When using postgresql, mysql or sqlserver, uncomment the @db.text annotations in model Account below
+  // Further reading: 
+  // https://next-auth.js.org/adapters/prisma#create-the-prisma-schema
+  // https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#string
+  url      = env("DATABASE_URL")
+}
+
+// Define models.
+
+model Example {
+  id String @id @default(cuid())
+}
+
+// Necessary for Next auth
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? //@db.Text
+  access_token      String? //@db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? //@db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  // id is unique, is the id field, and defaults to uuid
+  id            String       @id @unique @default(uuid())
+  // name is optional string
+  name          String?
+  // email is unique string
+  email         String       @unique
+  // when account was created, required
+  createdAt     DateTime     @default(now())
+  // when account was updated, upatedAT automatically stores when the record was last updated
+  updated       DateTime     @updatedAt
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  LoginToken    LoginToken[]
+  Posts         Post[]
+  userPosts     UserPost[]
+}
+
+// for logging in users, we will send them a LoginToken to their email
+model LoginToken {
+  // token id
+  id        String   @unique @default(uuid())
+  createdAt DateTime @default(now())
+  // links this model to the user model
+  user      User     @relation(fields: [userId], references: [id])
+  // user's id
+  userId    String
+  // link to redirect back to when the user left the site
+  redirect  String   @default("/")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Post {
+  id        String   @unique @default(uuid())
+  title     String
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model UserPost {
+  id       String @unique @default(uuid())
+  title    String
+  body     String
+  author   User   @relation(fields: [authorId], references: [id])
+  authorId String
+}
